@@ -3,6 +3,10 @@ With Kong Gateway, you can get metrics, logs, and tracings without modifying you
 Combined with Grafana Loki and Tempo, logs and tracings can be cross-referenced.
 Using the tools in this repository, you can easily build a Docker environment for validation.
 
+## Requirements
+- Docker and Docker Compose
+- [decK](https://docs.jp.konghq.com/deck/)
+
 ## Components
 The following components are used here.
 |Component | Description |
@@ -44,7 +48,7 @@ flowchart LR
 ```sh
 ./run.sh start
 ```
-It wrap `docker-compose up` and configure Kong Gateway's Service/Route/Plugin.
+It wrap `docker-compose up` and configure Kong Gateway's Service/Route/Plugin with decK.
 Multiple containers are launched after running the command, and each can be accessed as follows.
 |Service|Host|
 |---|---|
