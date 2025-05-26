@@ -7,6 +7,13 @@ Using the tools in this repository, you can easily build a Docker environment fo
 - Docker and Docker Compose
 - [decK](https://docs.jp.konghq.com/deck/)
 
+Also, by default, a license file is required to use Kong Gateway 3.10 or later.
+You must include the path to the license file in `KONG_LICENSE_FILE` in `env.sh`.
+The default path is as follows
+```sh
+~/.kong-license-data/license.json
+```
+
 ## Components
 The following components are used here.
 |Component | Description |
