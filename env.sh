@@ -13,3 +13,5 @@ export FLUENTBIT_VERSION=4.0.2
 
 export DECK_TLS_SKIP_VERIFY=true
 export DECK_KONG_ADDR=http://localhost:8001
+
+export KONG_LICENSE_FILE=~/.kong-license-data/license.json
