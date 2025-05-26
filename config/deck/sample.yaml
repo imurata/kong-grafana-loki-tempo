@@ -1,0 +1,61 @@
+_format_version: "3.0"
+services:
+- enabled: true
+  host: httpbin.konghq.com
+  name: test-service
+  plugins:
+  - name: http-log
+    enabled: true
+    config:
+      content_type: application/json
+      custom_fields_by_lua:
+        spanid: |-
+          local h = kong.request.get_header("traceparent")
+          return h:match("%-[a-f0-9]+%-([a-f0-9]+)%-")
+        traceid: |-
+          local h = kong.request.get_header("traceparent")
+          return h:match("%-([a-f0-9]+)%-[a-f0-9]+%-")
+      http_endpoint: http://fluentbit:2020
+    protocols:
+    - grpc
+    - grpcs
+    - http
+    - https
+  - name: opentelemetry
+    enabled: true
+    config:
+      header_type: preserve
+      propagation:
+        default_format: w3c
+      resource_attributes:
+        service.name: kong-dev
+      traces_endpoint: http://tempo:4318/v1/traces
+    protocols:
+    - grpc
+    - grpcs
+    - http
+    - https
+  - name: prometheus
+    enabled: true
+    config:
+      ai_metrics: true
+      bandwidth_metrics: true
+      latency_metrics: true
+      per_consumer: true
+      status_code_metrics: true
+      upstream_health_metrics: true
+      wasm_metrics: true
+    protocols:
+    - grpc
+    - grpcs
+    - http
+    - https
+  port: 443
+  protocol: https
+  routes:
+  - name: test-route
+    paths:
+    - /httpbin
+    protocols:
+    - http
+    - https

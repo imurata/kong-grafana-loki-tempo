@@ -1,0 +1,180 @@
+networks:
+  kong-net:
+    name: kong-net
+    external: false
+
+services:
+  kong-database:
+    image: postgres:${POSTGRES_VERSION:-latest}
+    container_name: kong-database
+    restart: unless-stopped
+    networks:
+      - kong-net
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: kong
+      POSTGRES_DB: kong
+      POSTGRES_PASSWORD: kongpass
+    volumes:
+      - kong-db-data:/var/lib/postgresql/data
+
+  kong-bootstrap:
+    image: kong/kong-gateway:${KONG_VERSION:-latest}
+    container_name: kong-bootstrap
+    depends_on:
+      - kong-database
+    networks:
+      - kong-net
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-database
+      KONG_PG_PASSWORD: kongpass
+      KONG_PASSWORD: test
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      "sleep 5 &&
+       kong migrations bootstrap"
+    restart: "no"
+
+  kong-gateway:
+    image: kong/kong-gateway:${KONG_VERSION:-latest}
+    container_name: kong-gateway
+    depends_on:
+      - kong-bootstrap
+    networks:
+      - kong-net
+    ports:
+      - "8000:8000"
+      - "8001:8001"
+      - "8002:8002"
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-database
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kongpass
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+      KONG_LICENSE_DATA: ${KONG_LICENSE_DATA}
+      KONG_TRACING_INSTRUMENTATIONS: "all"
+      KONG_TRACING_SAMPLING_RATE: 1.0
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  grafana:
+    image: grafana/grafana:${GRAFANA_VERSION:-latest}
+    container_name: grafana
+    volumes:
+      - ${PWD}/config/grafana/dashboards:/var/lib/grafana/dashboards
+      - ${PWD}/config/grafana/datasources:/etc/grafana/provisioning/datasources
+      - ${PWD}/config/grafana/provisioning:/etc/grafana/provisioning/dashboards
+    ports:
+      - "3000:3000"
+    networks:
+      - kong-net
+    depends_on:
+      - loki
+      - tempo
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+      - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor metricsSummary
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  prometheus:
+    image: prom/prometheus:${PROMETHEUS_VERSION:-latest}
+    container_name: prometheus
+    volumes:
+      - ${PWD}/config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - kong-net
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:9090/-/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  init:
+    image: &tempoImage grafana/tempo:${GRAFANA_TEMPO_VERSION:-latest}
+    user: root
+    entrypoint:
+      - "chown"
+      - "10001:10001"
+      - "/var/tempo"
+    volumes:
+      - ./config/tempo-data:/var/tempo
+    networks:
+      - kong-net
+
+  memcached:
+    image: memcached:${MEMCACHED_VERSION:-latest}
+    container_name: memcached
+    ports:
+      - "11211:11211"
+    environment:
+      - MEMCACHED_MAX_MEMORY=64m
+      - MEMCACHED_THREADS=4
+    networks:
+      - kong-net
+
+  tempo:
+    image: *tempoImage
+    container_name: tempo
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    volumes:
+      - ${PWD}/config/grafana/grafana-tempo/tempo.yaml:/etc/tempo.yaml
+      - ${PWD}/config/grafana/grafana-tempo/tempo-data:/var/tempo
+    ports:
+      - "14268:14268"
+      - "3200:3200"
+      - "9095:9095"
+      - "4317:4317"
+      - "4318:4318"
+      - "9411:9411"
+    depends_on:
+      - init
+      - memcached
+    networks:
+      - kong-net
+
+  loki:
+    image: grafana/loki:${GRAFANA_LOKI_VERSION:-latest}
+    container_name: loki
+    command: -config.file=/etc/loki/config.yaml
+    volumes:
+      - ${PWD}/config/grafana/grafana-loki/loki-config.yaml:/etc/loki/config.yaml
+    ports:
+      - "3100:3100"
+    healthcheck:
+      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - kong-net
+  fluentbit:
+    image: fluent/fluent-bit:${FLUENTBIT_VERSION:-latest}
+    container_name: fluentbit
+    command:
+      - --config=/fluent-bit/etc/fluent-bit.yaml
+    networks:
+      - kong-net
+    volumes:
+      - ${PWD}/config/fluent-bit/fluent-bit.yaml:/fluent-bit/etc/fluent-bit.yaml
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:${OTEL_COLLECTOR_VERSION:-latest}
+    container_name: otel-collector
+    networks:
+      - kong-net
+    volumes:
+      - ${PWD}/config/otel_collector/loki.yaml:/etc/otelcol-contrib/config.yaml
+
+volumes:
+  kong-db-data:
