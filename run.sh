@@ -13,6 +13,9 @@ fi
 
 function all_start()
 {
+    if [ ! -d "config/grafana/grafana-tempo/tempo-data" ]; then
+        mkdir -p config/grafana/grafana-tempo/tempo-data
+    fi
     docker-compose up -d 
     echo "Waiting for Kong Admin API to be ready..."
     while ! curl -s -o /dev/null -w "%{http_code}" http://localhost:8001/status | grep -q 200; do
