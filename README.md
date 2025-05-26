@@ -65,3 +65,8 @@ Grafana will open in your browser, so you can see the following:
 - Logs
 - The ability to navigate from traces to logs
 - The ability to navigate from logs to traces
+
+3. Stop the environment
+```sh
+./run.sh stop
+```
