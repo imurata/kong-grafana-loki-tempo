@@ -21,10 +21,10 @@ The following components are used here.
 |Kong Gateway|API Gateway that provides observability features such as metrics, logs, and tracing via Plugins.|
 |Prometheus|A monitoring system and time series database that collects metrics from Kong Gateway.|
 |Grafana|A visualization tool that displays metrics, logs, and tracings.|
-|Grafana Loki|A log aggregation system that collects logs from Kong Gateway.|
+|Grafana Loki|A log aggregation system that collects logs from OTEL Collector.|
 |Grafana Tempo|A distributed tracing system that collects traces from Kong Gateway.|
-|fluent-bit|A lightweight log processor that collects logs from Kong Gateway and sends them to Grafana Loki.|
-|OpenTelemetry Collector|A collector that collects traces from Kong Gateway and sends them to Grafana Tempo.|
+|fluent-bit|A lightweight log processor that collects logs from Kong Gateway and sends them to OTEL Collector.|
+|OpenTelemetry Collector|A collector that collects logs from fluent-bit and sends them to Grafana Loki.|
 
 
 Kong's OTEL Collector can also send logs, but specifying the Loki endpoint did not interpret the logs correctly, so here they are sent through the OTEL Collector.
