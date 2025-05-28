@@ -1,7 +1,6 @@
 pipeline:
   inputs:
     - name: http
-      tag: kong_http_log
       port: 2020
   outputs:
     - name: opentelemetry
@@ -13,4 +12,3 @@ pipeline:
       logs_body_key: ${message}
       logs_trace_id_message_key: trace_id
       logs_span_id_message_key: span_id
-      logs_severity_text_message_key: loglevel
