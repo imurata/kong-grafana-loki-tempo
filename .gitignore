@@ -1,1 +1,2 @@
 config/grafana/grafana-tempo/tempo-data/*
+.DS_Store

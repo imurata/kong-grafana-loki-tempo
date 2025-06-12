@@ -43,7 +43,26 @@ case "$COMMAND" in
         all_start
         ;;
     "test")
-        curl -i http://localhost:8000/httpbin/anything
+        curl -s -o /dev/null -w "%{http_code}" http://localhost:8001/status | grep -q 200
+        if [ $? -ne 0 ]; then
+            echo "Kong Admin API is not ready. Please start the services first."
+            exit 1
+        fi
+        echo "Kong Admin API is ready. Running tests..."
+
+        echo "#1. Get status code 200 and 500 randomly from httpbin"
+        for i in {1..10}; do
+            curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8000/httpbin/status/200,500
+            sleep 0.1
+        done
+
+        echo "#2. Deley response from httpbin"
+        curl -s -o /dev/null -w "\
+Connect: %{time_connect}s\n\
+Pre-transfer: %{time_pretransfer}s\n\
+Start-transfer: %{time_starttransfer}s\n\
+Total: %{time_total}s\n" http://localhost:8000/httpbin/delay/5
+        
         open http://localhost:3000
         ;;
     *)
